@@ -1,0 +1,131 @@
+import peasy.*;
+
+PeasyCam cam;
+
+int pointsCount = 3000;
+float[] x = new float[pointsCount];
+float[] y = new float[pointsCount];
+float[] z = new float[pointsCount];
+
+float blackHoleSize = 40;
+float radius = 1;
+float radiusSpeed = 0.005;
+
+int colorMode = 1; // 0 - одноцветный, 1 - случайные цвета, 2 - плавная смена цветов
+float hue = 0;
+float colorChangeFrequency = 0.01;
+
+float pointSize = 3;
+boolean showLines = false;
+boolean saveFrame = false;
+File selectedFile;
+
+void setup() {
+  size(800, 600, P3D);
+  cam = new PeasyCam(this, 800);
+  colorMode(HSB, 1.0);
+  generatePoints();
+}
+
+ void draw() {
+  loadPixels();
+  if (saveFrame) {
+    saveScreenshot(selectedFile);
+    saveFrame = false;
+  }
+  
+  background(0);
+  lights();
+  noFill();
+
+  if (colorMode == 2) {
+    stroke(hue, 1, 1);
+    hue += colorChangeFrequency;
+    if (hue > 1) hue -= 1;
+  } else {
+    stroke(255);
+  }
+
+  pushMatrix();
+  translate(width/2, height/2, 0);
+
+  strokeWeight(pointSize);
+
+  for (int i = 0; i < pointsCount; i++) {
+    float distance = dist(x[i], y[i], z[i], 0, 0, 0);
+
+    if (distance < blackHoleSize) {
+      float scaleFactor = map(distance, 0, blackHoleSize, 0.1, 1);
+      x[i] *= scaleFactor;
+      y[i] *= scaleFactor;
+      z[i] *= scaleFactor;
+    } else {
+      x[i] += sin(frameCount * 0.01 + i) * radius;
+      y[i] += cos(frameCount * 0.01 + i) * radius;
+      z[i] += sin(frameCount * 0.01 + i) * radius;
+    }
+
+    if (colorMode == 1) {
+      stroke(random(0, 1), 1, 1);
+    }
+
+    point(x[i], y[i], z[i]);
+
+    if (showLines && i < pointsCount - 1) {
+      line(x[i], y[i], z[i], x[i+1], y[i+1], z[i+1]);
+    }
+  }
+
+  radius += radiusSpeed;
+
+  popMatrix();
+}
+
+void keyPressed() {
+  switch (key) {
+    case 'c':
+    case 'C':
+      colorMode = (colorMode + 1) % 3;
+      break;
+      case 's':
+    case 'S':
+      selectOutput("Выберите путь для сохранения:", "saveScreenshot");
+      break;
+    case 'l':
+    case 'L':
+      showLines = !showLines;
+      break;
+    case ' ':
+      generatePoints();
+      break;
+  }
+}
+
+void mouseWheel(MouseEvent event) {
+  float e = event.getCount();
+  cam.setDistance(cam.getDistance() * (e > 0 ? 1.1 : 1 / 1.1));
+}
+
+void generatePoints() {
+  for (int i = 0; i < pointsCount; i++) {
+    x[i] = random(-
+width/2, width/2);
+y[i] = random(-height/2, height/2);
+z[i] = random(-800, 800);
+}
+}
+
+void saveScreenshot(File selection) {
+  if (selection == null) {
+    println("Отмена сохранения");
+  } else {
+    PImage screenshot = createImage(width, height, RGB);
+    screenshot.loadPixels();
+    for (int i = 0; i < pixels.length; i++) {
+      screenshot.pixels[i] = pixels[i];
+    }
+    screenshot.updatePixels();
+    screenshot.save(selection.getAbsolutePath());
+    println("Сохранение в " + selection.getAbsolutePath());
+  }
+}
